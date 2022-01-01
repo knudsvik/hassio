@@ -1,0 +1,103 @@
+
+# Configure a default setup of Home Assistant (frontend, api, etc)
+default_config:
+
+modbus:
+  - name: "vsr150"
+    type: serial
+    baudrate: 9600
+    bytesize: 8
+    method: rtu
+    parity: N
+    port: /dev/serial/by-id/usb-Prolific_Technology_Inc._USB-Serial_Controller-if00-port0
+    stopbits: 1
+    
+    sensors:
+      - name: VSR150 speed level
+        slave: 1
+        address: 100
+        scan_interval: 30
+      - name: VSR150 fan speed in
+        slave: 1
+        address: 110
+        unit_of_measurement: rpm
+        scan_interval: 30
+      - name: VSR150 fan speed out
+        slave: 1
+        address: 111
+        unit_of_measurement: rpm
+        scan_interval: 30
+      - name: VSR150 temperature set point
+        slave: 1
+        address: 207
+        unit_of_measurement: °C
+        device_class: temperature
+        scale: 0.1
+      - name: VSR150 temperature in
+        slave: 1
+        address: 213
+        unit_of_measurement: °C
+        device_class: temperature
+        scale: 0.1
+        scan_interval: 30
+      - name: VSR150 temperature out
+        slave: 1
+        address: 214
+        unit_of_measurement: °C
+        device_class: temperature
+        scale: 0.1
+        scan_interval: 30
+      - name: VSR150 temperature outside
+        slave: 1
+        address: 217
+        unit_of_measurement: °C
+        device_class: temperature
+        scale: 0.1
+        scan_interval: 30
+      - name: VSR150 rotor state
+        slave: 1
+        address: 350
+        scan_interval: 30
+      - name: VSR150 filter elapsed
+        unit_of_measurement: days
+        slave: 1
+        address: 601
+        scan_interval: 30
+      - name: VSR150 alarm
+        slave: 1
+        address: 800
+        scan_interval: 30
+      - name: VSR150 alarm details
+        slave: 1
+        address: 802
+        scan_interval: 30
+
+mqtt_statestream:
+  base_topic: homeassistant
+  publish_attributes: true
+  publish_timestamps: true
+  include:
+    entity_globs:
+      - sensor.vsr150*
+
+sensor:
+    - platform: template
+      sensors:
+          vsr150_rotor_state_text:
+            friendly_name: "Rotor status"
+            value_template: >-
+              {% set mapper =  {
+                  '0' : 'Normal',
+                  '1' : 'Rotor fault assumed',
+                  '2' : 'Rotor fault detected',
+                  '3' : 'Valid summer mode, not active',
+                  '4' : 'Summer mode',
+                  '5' : 'Waiting to go out of Manual summer mode due to temperature conditions',
+                  '6' : 'Manual summer mode',
+                  '7' : 'Rotor cleaning during summer mode',
+                  '8' : 'Rotor cleaning during manual summer mode',
+                  '9' : 'Fans off',
+                  '10': 'Rotor cleaning during fans off',
+                  '11': 'Rotor fault, conditions for rotor fault not valid anymore' } %}
+              {% set state =  states.sensor.vsr150_rotor_state.state %}
+              {{ mapper[state] if state in mapper else 'Unknown' }}
